@@ -38,6 +38,7 @@ namespace Lykke.Job.OrderbookToDiskWriter.Services
             _diskPath = diskPath;
             _warningSizeInGigabytes = warningSizeInGigabytes > 0 ? warningSizeInGigabytes : 0;
             _maxSizeInGigabytes = maxSizeInGigabytes > 0 ? maxSizeInGigabytes : 0;
+
             shutdownManager.Register(this, 3);
 
             if (!Directory.Exists(_diskPath))

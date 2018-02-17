@@ -117,7 +117,7 @@ namespace Lykke.Job.OrderbookToDiskWriter
             {
                 // NOTE: Job not yet recieve and process IsAlive requests here
 
-                await ApplicationContainer.Resolve<IStartupManager>().StartAsync();
+                await ApplicationContainer.Resolve<IStartupManager>().StartAsync(ApplicationContainer);
                 await Log.WriteMonitorAsync("", Program.EnvInfo, "Started");
             }
             catch (Exception ex)

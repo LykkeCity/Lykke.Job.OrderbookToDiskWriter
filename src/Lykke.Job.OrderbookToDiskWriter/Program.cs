@@ -3,13 +3,12 @@ using System.IO;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.PlatformAbstractions;
+using Lykke.Job.OrderbookToDiskWriter.Core;
 
 namespace Lykke.Job.OrderbookToDiskWriter
 {
     internal sealed class Program
     {
-        internal const int Port = 5000;
-
         public static string EnvInfo => Environment.GetEnvironmentVariable("ENV_INFO");
 
         public static async Task Main(string[] args)
@@ -26,7 +25,7 @@ namespace Lykke.Job.OrderbookToDiskWriter
             {
                 var webHost = new WebHostBuilder()
                     .UseKestrel()
-                    .UseUrls($"http://*:{Port}")
+                    .UseUrls($"http://*:{Constants.Port}")
                     .UseContentRoot(Directory.GetCurrentDirectory())
                     .UseStartup<Startup>()
                     .UseApplicationInsights()

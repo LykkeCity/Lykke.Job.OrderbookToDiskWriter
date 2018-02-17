@@ -1,30 +1,54 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
+using System.Collections.Generic;
+using System.Net;
+using Autofac;
 using Common.Log;
+using Lykke.Job.OrderbookToDiskWriter.Core;
 using Lykke.Job.OrderbookToDiskWriter.Core.Services;
 
 namespace Lykke.Job.OrderbookToDiskWriter.Services
 {
-    // NOTE: Sometimes, startup process which is expressed explicitly is not just better, 
-    // but the only way. If this is your case, use this class to manage startup.
-    // For example, sometimes some state should be restored before any periodical handler will be started, 
-    // or any incoming message will be processed and so on.
-    // Do not forget to remove As<IStartable>() and AutoActivate() from DI registartions of services, 
-    // which you want to startup explicitly.
-
     public class StartupManager : IStartupManager
     {
         private readonly ILog _log;
+        private readonly List<Type> _types = new List<Type>();
+
+        private bool _apiIsReady = false;
 
         public StartupManager(ILog log)
         {
             _log = log;
         }
 
-        public async Task StartAsync()
+        public async Task StartAsync(IContainer container)
         {
-            // TODO: Implement your startup logic here. Good idea is to log every step
+            while (!_apiIsReady)
+            {
+                WebRequest request = WebRequest.Create($"http://localhost:{Constants.Port}/api/isalive");
+                try
+                {
+                    HttpWebResponse response = (HttpWebResponse)request.GetResponse();
+                    _apiIsReady = response != null && response.StatusCode == HttpStatusCode.OK;
+                    if (!_apiIsReady)
+                        await Task.Delay(TimeSpan.FromSeconds(1));
+                }
+                catch
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(1));
+                }
+            }
 
-            await Task.CompletedTask;
+            foreach (var type in _types)
+            {
+                var startable = (IStartable)container.Resolve(type);
+                startable.Start();
+            }
+        }
+
+        public void Register(Type startable)
+        {
+            _types.Add(startable);
         }
     }
 }

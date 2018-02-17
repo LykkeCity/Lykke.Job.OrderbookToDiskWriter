@@ -34,7 +34,8 @@ namespace Lykke.Job.OrderbookToDiskWriter.Modules
                 .As<IHealthService>()
                 .SingleInstance();
 
-            builder.RegisterType<StartupManager>()
+            var startupManager = new StartupManager(_log);
+            builder.RegisterInstance(startupManager)
                 .As<IStartupManager>();
 
             builder.RegisterType<ShutdownManager>()
@@ -42,26 +43,32 @@ namespace Lykke.Job.OrderbookToDiskWriter.Modules
 
             builder.RegisterType<DiskWorker>()
                 .As<IDiskWorker>()
-                .As<IStartable>()
-                .AutoActivate()
+                .AsSelf()
+                //.As<IStartable>()
+                //.AutoActivate()
                 .SingleInstance();
+            startupManager.Register(typeof(DiskWorker));
 
             builder.RegisterType<DataProcessor>()
                 .As<IDataProcessor>()
-                .As<IStartable>()
-                .AutoActivate()
+                .AsSelf()
+                //.As<IStartable>()
+                //.AutoActivate()
                 .SingleInstance()
                 .WithParameter(TypedParameter.From(_settings.DiskPath))
                 .WithParameter("diskPath", _settings.DiskPath)
                 .WithParameter("warningSizeInGigabytes", _settings.WarningSizeInGigabytes)
                 .WithParameter("maxSizeInGigabytes", _settings.MaxSizeInGigabytes);
+            startupManager.Register(typeof(DataProcessor));
 
             builder.RegisterType<OrderbookSubscriber>()
-                .As<IStartable>()
-                .AutoActivate()
+                .AsSelf()
+                //.As<IStartable>()
+                //.AutoActivate()
                 .SingleInstance()
                 .WithParameter("connectionString", _settings.Rabbit.ConnectionString)
                 .WithParameter("exchangeName", _settings.Rabbit.ExchangeName);
+            startupManager.Register(typeof(OrderbookSubscriber));
         }
     }
 }

@@ -18,10 +18,13 @@ namespace Lykke.Job.OrderbookToDiskWriter.Services
 
         private Dictionary<string, List<string>> _directoriesDict = new Dictionary<string, List<string>>();
 
-        public DiskWorker(ILog log, IShutdownManager shutdownManager)
+        public DiskWorker(
+            ILog log,
+            IShutdownManager shutdownManager)
             : base((int)TimeSpan.FromSeconds(3).TotalMilliseconds, log)
         {
             _log = log;
+
             shutdownManager.Register(this, 1);
         }
 
