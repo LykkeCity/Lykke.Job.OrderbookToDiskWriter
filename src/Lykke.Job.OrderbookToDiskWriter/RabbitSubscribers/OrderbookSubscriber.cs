@@ -38,7 +38,7 @@ namespace Lykke.Job.OrderbookToDiskWriter.RabbitSubscribers
         public void Start()
         {
             var settings = RabbitMqSubscriptionSettings
-                .CreateForSubscriber(_connectionString, _exchangeName, "rabbitmqtodisksaver")
+                .CreateForSubscriber(_connectionString, _exchangeName, "orderbooktodiskwriter")
                 .MakeDurable();
 
             _subscriber = new RabbitMqSubscriber<Orderbook>(settings,
