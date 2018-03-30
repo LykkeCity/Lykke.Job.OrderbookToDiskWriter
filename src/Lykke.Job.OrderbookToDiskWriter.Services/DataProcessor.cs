@@ -92,6 +92,7 @@ namespace Lykke.Job.OrderbookToDiskWriter.Services
                     if (!File.Exists(file.FullName))
                         continue;
                     File.Delete(file.FullName);
+                    await _log.WriteWarningAsync(nameof(DataProcessor), nameof(Execute), $"Deleted {file.FullName} to free some space!");
                     sizeToFree -= file.Length;
                     ++deletedFilesCount;
                     if (sizeToFree <= 0)
