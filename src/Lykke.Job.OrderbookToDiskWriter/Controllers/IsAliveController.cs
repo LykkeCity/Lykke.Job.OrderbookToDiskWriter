@@ -1,9 +1,9 @@
 ﻿using System.Linq;
 using System.Net;
-using Lykke.Job.OrderbookToDiskWriter.Core.Services;
-using Lykke.Job.OrderbookToDiskWriter.Models;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.SwaggerGen;
+using Lykke.Common.Api.Contract.Responses;
+using Lykke.Job.OrderbookToDiskWriter.Core.Services;
 
 namespace Lykke.Job.OrderbookToDiskWriter.Controllers
 {

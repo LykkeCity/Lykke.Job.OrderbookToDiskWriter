@@ -1,5 +1,6 @@
 ﻿using Autofac;
 using Common.Log;
+using Lykke.Common;
 using Lykke.Job.OrderbookToDiskWriter.Core.Services;
 using Lykke.Job.OrderbookToDiskWriter.Settings;
 using Lykke.Job.OrderbookToDiskWriter.Services;
@@ -40,6 +41,8 @@ namespace Lykke.Job.OrderbookToDiskWriter.Modules
 
             builder.RegisterType<ShutdownManager>()
                 .As<IShutdownManager>();
+
+            builder.RegisterResourcesMonitoring(_log);
 
             builder.RegisterType<DiskWorker>()
                 .As<IDiskWorker>()
