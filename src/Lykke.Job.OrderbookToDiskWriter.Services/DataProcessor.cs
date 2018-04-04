@@ -50,7 +50,7 @@ namespace Lykke.Job.OrderbookToDiskWriter.Services
 
         public void Process(Orderbook item)
         {
-            string directory1 = $"{item.AssetPair}-{(item.IsBuy ? "buy" : "sell")}";
+            string directory1 = $"{item.AssetPair.Replace('|', '_')}-{(item.IsBuy ? "buy" : "sell")}";
             if (!_directoriesHash.Contains(directory1))
             {
                 if (!Directory.Exists(directory1))
