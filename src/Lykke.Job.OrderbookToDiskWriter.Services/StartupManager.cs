@@ -3,7 +3,6 @@ using System.Threading.Tasks;
 using System.Collections.Generic;
 using System.Net;
 using Autofac;
-using Common.Log;
 using Lykke.Job.OrderbookToDiskWriter.Core;
 using Lykke.Job.OrderbookToDiskWriter.Core.Services;
 
@@ -11,15 +10,9 @@ namespace Lykke.Job.OrderbookToDiskWriter.Services
 {
     public class StartupManager : IStartupManager
     {
-        private readonly ILog _log;
         private readonly List<Type> _types = new List<Type>();
 
-        private bool _apiIsReady = false;
-
-        public StartupManager(ILog log)
-        {
-            _log = log;
-        }
+        private bool _apiIsReady;
 
         public async Task StartAsync(IContainer container)
         {
@@ -29,7 +22,7 @@ namespace Lykke.Job.OrderbookToDiskWriter.Services
                 try
                 {
                     HttpWebResponse response = (HttpWebResponse)request.GetResponse();
-                    _apiIsReady = response != null && response.StatusCode == HttpStatusCode.OK;
+                    _apiIsReady = response.StatusCode == HttpStatusCode.OK;
                     if (!_apiIsReady)
                         await Task.Delay(TimeSpan.FromSeconds(1));
                 }

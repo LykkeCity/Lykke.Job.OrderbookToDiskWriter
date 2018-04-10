@@ -76,8 +76,8 @@ namespace Lykke.Job.OrderbookToDiskWriter.Services
 
             if (_warningSizeInGigabytes > 0 && gbSize >= _warningSizeInGigabytes)
                 await _log.WriteWarningAsync(
-                    nameof(DataProcessor),
-                    nameof(Execute),
+                    "DataProcessor.Execute",
+                    "SpaceIssue",
                     $"RabbitMq data on {_diskPath} have taken {gbSize}Gb (>= {_warningSizeInGigabytes}Gb)");
 
             if (_maxSizeInGigabytes == 0 || gbSize < _maxSizeInGigabytes)
@@ -92,7 +92,7 @@ namespace Lykke.Job.OrderbookToDiskWriter.Services
                     if (!File.Exists(file.FullName))
                         continue;
                     File.Delete(file.FullName);
-                    await _log.WriteWarningAsync(nameof(DataProcessor), nameof(Execute), $"Deleted {file.FullName} to free some space!");
+                    await _log.WriteWarningAsync("DataProcessor.Execute", "Deleted", $"Deleted {file.FullName} to free some space!");
                     sizeToFree -= file.Length;
                     ++deletedFilesCount;
                     if (sizeToFree <= 0)
@@ -104,7 +104,7 @@ namespace Lykke.Job.OrderbookToDiskWriter.Services
                 }
             }
             if (deletedFilesCount > 0)
-                await _log.WriteWarningAsync(nameof(DataProcessor), nameof(Execute), $"Deleted {deletedFilesCount} files from {_diskPath}");
+                await _log.WriteWarningAsync("DataProcessor.Execute", "DeletedTotal", $"Deleted {deletedFilesCount} files from {_diskPath}");
         }
 
         private static string FormatMessage(Orderbook item)

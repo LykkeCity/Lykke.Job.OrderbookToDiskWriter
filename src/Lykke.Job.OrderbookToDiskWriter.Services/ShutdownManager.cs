@@ -1,21 +1,16 @@
 ﻿using System.Linq;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using JetBrains.Annotations;
 using Common;
-using Common.Log;
 using Lykke.Job.OrderbookToDiskWriter.Core.Services;
 
 namespace Lykke.Job.OrderbookToDiskWriter.Services
 {
+    [UsedImplicitly]
     public class ShutdownManager : IShutdownManager
     {
-        private readonly ILog _log;
         private readonly Dictionary<int, List<IStopable>> _items = new Dictionary<int, List<IStopable>>();
-
-        public ShutdownManager(ILog log)
-        {
-            _log = log;
-        }
 
         public void Register(IStopable stopable, int priority)
         {

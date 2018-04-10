@@ -74,7 +74,7 @@ namespace Lykke.Job.OrderbookToDiskWriter.Services
             }
         }
 
-        private async Task SaveDataItemAsync(IEnumerable<string> items, string directoryPath)
+        private async Task SaveDataItemAsync(ICollection<string> items, string directoryPath)
         {
             if (!Directory.Exists(directoryPath))
                 Directory.CreateDirectory(directoryPath);

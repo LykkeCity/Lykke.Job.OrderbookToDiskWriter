@@ -35,7 +35,7 @@ namespace Lykke.Job.OrderbookToDiskWriter.Modules
                 .As<IHealthService>()
                 .SingleInstance();
 
-            var startupManager = new StartupManager(_log);
+            var startupManager = new StartupManager();
             builder.RegisterInstance(startupManager)
                 .As<IStartupManager>();
 
