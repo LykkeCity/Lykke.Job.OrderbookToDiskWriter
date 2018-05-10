@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 using System.Collections.Generic;
-using System.Net;
 using Autofac;
-using Lykke.Job.OrderbookToDiskWriter.Core;
 using Lykke.Job.OrderbookToDiskWriter.Core.Services;
 
 namespace Lykke.Job.OrderbookToDiskWriter.Services
@@ -12,31 +10,15 @@ namespace Lykke.Job.OrderbookToDiskWriter.Services
     {
         private readonly List<Type> _types = new List<Type>();
 
-        private bool _apiIsReady;
-
-        public async Task StartAsync(IContainer container)
+        public Task StartAsync(IContainer container)
         {
-            while (!_apiIsReady)
-            {
-                WebRequest request = WebRequest.Create($"http://localhost:{Constants.Port}/api/isalive");
-                try
-                {
-                    HttpWebResponse response = (HttpWebResponse)request.GetResponse();
-                    _apiIsReady = response.StatusCode == HttpStatusCode.OK;
-                    if (!_apiIsReady)
-                        await Task.Delay(TimeSpan.FromSeconds(1));
-                }
-                catch
-                {
-                    await Task.Delay(TimeSpan.FromSeconds(1));
-                }
-            }
-
             foreach (var type in _types)
             {
                 var startable = (IStartable)container.Resolve(type);
                 startable.Start();
             }
+
+            return Task.CompletedTask;
         }
 
         public void Register(Type startable)

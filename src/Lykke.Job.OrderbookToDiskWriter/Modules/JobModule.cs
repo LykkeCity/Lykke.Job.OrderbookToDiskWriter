@@ -37,17 +37,18 @@ namespace Lykke.Job.OrderbookToDiskWriter.Modules
 
             var startupManager = new StartupManager();
             builder.RegisterInstance(startupManager)
-                .As<IStartupManager>();
+                .As<IStartupManager>()
+                .SingleInstance();
 
             builder.RegisterType<ShutdownManager>()
-                .As<IShutdownManager>();
+                .As<IShutdownManager>()
+                .SingleInstance();
 
             builder.RegisterResourcesMonitoring(_log);
 
             builder.RegisterType<DiskWorker>()
                 .As<IDiskWorker>()
                 .AsSelf()
-                //.As<IStartable>()
                 //.AutoActivate()
                 .SingleInstance();
             startupManager.Register(typeof(DiskWorker));
@@ -55,7 +56,6 @@ namespace Lykke.Job.OrderbookToDiskWriter.Modules
             builder.RegisterType<DataProcessor>()
                 .As<IDataProcessor>()
                 .AsSelf()
-                //.As<IStartable>()
                 //.AutoActivate()
                 .SingleInstance()
                 .WithParameter(TypedParameter.From(_settings.DiskPath))
@@ -66,7 +66,6 @@ namespace Lykke.Job.OrderbookToDiskWriter.Modules
 
             builder.RegisterType<OrderbookSubscriber>()
                 .AsSelf()
-                //.As<IStartable>()
                 //.AutoActivate()
                 .SingleInstance()
                 .WithParameter("connectionString", _settings.Rabbit.ConnectionString)

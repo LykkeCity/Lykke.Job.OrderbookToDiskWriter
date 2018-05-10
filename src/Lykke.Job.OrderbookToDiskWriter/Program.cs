@@ -3,7 +3,6 @@ using System.IO;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.PlatformAbstractions;
-using Lykke.Job.OrderbookToDiskWriter.Core;
 
 namespace Lykke.Job.OrderbookToDiskWriter
 {
@@ -25,7 +24,7 @@ namespace Lykke.Job.OrderbookToDiskWriter
             {
                 var webHost = new WebHostBuilder()
                     .UseKestrel()
-                    .UseUrls($"http://*:{Constants.Port}")
+                    .UseUrls($"http://*:5000")
                     .UseContentRoot(Directory.GetCurrentDirectory())
                     .UseStartup<Startup>()
                     .UseApplicationInsights()
