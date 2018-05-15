@@ -70,8 +70,25 @@ namespace Lykke.Job.OrderbookToDiskWriter.Services
             if (_warningSizeInGigabytes == 0 && _maxSizeInGigabytes == 0)
                 return;
 
-            var fileInfos = _dirInfo.EnumerateFiles("*", SearchOption.AllDirectories);
-            long totalSize = fileInfos.Sum(f => f.Length);
+            var dirFilesCountDict = new Dictionary<int, List<List<FileInfo>>>();
+            long totalSize = 0;
+            var dirs = _dirInfo.EnumerateDirectories("*", SearchOption.TopDirectoryOnly);
+            foreach (var dir in dirs)
+            {
+                try
+                {
+                    var files = dir.GetFiles().ToList();
+                    totalSize += files.Sum(f => f.Length);
+                    if (dirFilesCountDict.ContainsKey(files.Count))
+                        dirFilesCountDict[files.Count].Add(files);
+                    else
+                        dirFilesCountDict.Add(files.Count, new List<List<FileInfo>> { files });
+                }
+                catch
+                {
+                }
+            }
+
             int gbSize = (int)(totalSize / _gigabyte);
 
             if (_warningSizeInGigabytes > 0 && gbSize >= _warningSizeInGigabytes)
@@ -85,23 +102,37 @@ namespace Lykke.Job.OrderbookToDiskWriter.Services
 
             long sizeToFree = totalSize - _maxSizeInGigabytes * _gigabyte;
             int deletedFilesCount = 0;
-            foreach (var file in fileInfos)
+            var keys = dirFilesCountDict.Keys.OrderByDescending(k => k).ToList();
+            for (int i = 0; i < keys.Count; ++i)
             {
-                try
+                if (i > 0)
+                    dirFilesCountDict[keys[i]].AddRange(dirFilesCountDict[keys[i-1]]);
+                var dirsToClean = dirFilesCountDict[keys[i]];
+                foreach (var dirFiles in dirsToClean)
                 {
-                    if (!File.Exists(file.FullName))
+                    if (dirFiles.Count == 0)
                         continue;
-                    File.Delete(file.FullName);
-                    await _log.WriteWarningAsync("DataProcessor.Execute", "Deleted", $"Deleted {file.FullName} to free some space!");
-                    sizeToFree -= file.Length;
-                    ++deletedFilesCount;
-                    if (sizeToFree <= 0)
-                        break;
+
+                    FileInfo file = dirFiles[0];
+                    try
+                    {
+                        if (!File.Exists(file.FullName))
+                            continue;
+                        File.Delete(file.FullName);
+                        await _log.WriteWarningAsync("DataProcessor.Execute", "Deleted", $"Deleted {file.FullName} to free some space!");
+                        ++deletedFilesCount;
+                        sizeToFree -= file.Length;
+                        if (sizeToFree <= 0)
+                            break;
+                    }
+                    catch (Exception ex)
+                    {
+                        await _log.WriteWarningAsync(nameof(DataProcessor), nameof(Execute), $"Couldn't delete {file.Name}", ex);
+                    }
+                    dirFiles.RemoveAt(0);
                 }
-                catch (Exception ex)
-                {
-                    await _log.WriteWarningAsync(nameof(DataProcessor), nameof(Execute), $"Couldn't delete {file.Name}", ex);
-                }
+                if (sizeToFree <= 0)
+                    break;
             }
             if (deletedFilesCount > 0)
                 await _log.WriteWarningAsync("DataProcessor.Execute", "DeletedTotal", $"Deleted {deletedFilesCount} files from {_diskPath}");
