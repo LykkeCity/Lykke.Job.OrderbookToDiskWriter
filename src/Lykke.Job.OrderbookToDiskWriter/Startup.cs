@@ -4,6 +4,7 @@ using Autofac;
 using Autofac.Extensions.DependencyInjection;
 using AzureStorage.Tables;
 using Common.Log;
+using Lykke.Common;
 using Lykke.Common.ApiLibrary.Middleware;
 using Lykke.Common.ApiLibrary.Swagger;
 using Lykke.Common.Api.Contract.Responses;
@@ -23,8 +24,6 @@ namespace Lykke.Job.OrderbookToDiskWriter
 {
     public class Startup
     {
-        private LogToConsole _console;
-
         public IHostingEnvironment Environment { get; }
         public IContainer ApplicationContainer { get; private set; }
         public IConfigurationRoot Configuration { get; }
@@ -57,11 +56,16 @@ namespace Lykke.Job.OrderbookToDiskWriter
                 });
 
                 var builder = new ContainerBuilder();
-                var appSettings = Configuration.LoadSettings<AppSettings>();
+                var appSettings = Configuration.LoadSettings<AppSettings>(o =>
+                {
+                    o.SetConnString(s => s.SlackNotifications.AzureQueue.ConnectionString);
+                    o.SetQueueName(s => s.SlackNotifications.AzureQueue.QueueName);
+                    o.SenderName = $"{AppEnvironment.Name} {AppEnvironment.Version}";
+                });
 
                 Log = CreateLogWithSlack(services, appSettings);
 
-                builder.RegisterModule(new JobModule(appSettings.CurrentValue.OrderbookToDiskWriterJob, Log, _console));
+                builder.RegisterModule(new JobModule(appSettings.CurrentValue.OrderbookToDiskWriterJob, Log));
 
                 builder.Populate(services);
 
@@ -102,11 +106,11 @@ namespace Lykke.Job.OrderbookToDiskWriter
 
                 appLifetime.ApplicationStarted.Register(() => StartApplication().GetAwaiter().GetResult());
                 appLifetime.ApplicationStopping.Register(() => StopApplication().GetAwaiter().GetResult());
-                appLifetime.ApplicationStopped.Register(() => CleanUp().GetAwaiter().GetResult());
+                appLifetime.ApplicationStopped.Register(CleanUp);
             }
             catch (Exception ex)
             {
-                Log?.WriteFatalErrorAsync(nameof(Startup), nameof(Configure), "", ex).GetAwaiter().GetResult();
+                Log?.WriteFatalError(nameof(Startup), nameof(Configure), ex);
                 throw;
             }
         }
@@ -118,11 +122,11 @@ namespace Lykke.Job.OrderbookToDiskWriter
                 // NOTE: Job not yet recieve and process IsAlive requests here
 
                 await ApplicationContainer.Resolve<IStartupManager>().StartAsync(ApplicationContainer);
-                await Log.WriteMonitorAsync("", Program.EnvInfo, "Started");
+                Log.WriteMonitor("", Program.EnvInfo, "Started");
             }
             catch (Exception ex)
             {
-                await Log.WriteFatalErrorAsync(nameof(Startup), nameof(StartApplication), "", ex);
+                Log.WriteFatalError(nameof(Startup), nameof(StartApplication), ex);
                 throw;
             }
         }
@@ -137,24 +141,18 @@ namespace Lykke.Job.OrderbookToDiskWriter
             }
             catch (Exception ex)
             {
-                if (Log != null)
-                {
-                    await Log.WriteFatalErrorAsync(nameof(Startup), nameof(StopApplication), "", ex);
-                }
+                Log?.WriteFatalError(nameof(Startup), nameof(StopApplication), ex);
                 throw;
             }
         }
 
-        private async Task CleanUp()
+        private void CleanUp()
         {
             try
             {
                 // NOTE: Job can't recieve and process IsAlive requests here, so you can destroy all resources
                 
-                if (Log != null)
-                {
-                    await Log.WriteMonitorAsync("", Program.EnvInfo, "Terminating");
-                }
+                Log?.WriteMonitor("", Program.EnvInfo, "Terminating");
                 
                 ApplicationContainer.Dispose();
             }
@@ -162,7 +160,7 @@ namespace Lykke.Job.OrderbookToDiskWriter
             {
                 if (Log != null)
                 {
-                    await Log.WriteFatalErrorAsync(nameof(Startup), nameof(CleanUp), "", ex);
+                    Log.WriteFatalError(nameof(Startup), nameof(CleanUp), ex);
                     (Log as IDisposable)?.Dispose();
                 }
                 throw;
@@ -171,17 +169,17 @@ namespace Lykke.Job.OrderbookToDiskWriter
 
         private ILog CreateLogWithSlack(IServiceCollection services, IReloadingManager<AppSettings> settings)
         {
-            _console = new LogToConsole();
+            var console = new LogToConsole();
             var aggregateLogger = new AggregateLogger();
 
-            aggregateLogger.AddLog(_console);
+            aggregateLogger.AddLog(console);
 
             var dbLogConnectionStringManager = settings.Nested(x => x.OrderbookToDiskWriterJob.LogsConnString);
             var dbLogConnectionString = dbLogConnectionStringManager.CurrentValue;
 
             if (string.IsNullOrEmpty(dbLogConnectionString))
             {
-                _console.WriteWarningAsync(nameof(Startup), nameof(CreateLogWithSlack), "Table loggger is not inited").Wait();
+                console.WriteWarning(nameof(Startup), nameof(CreateLogWithSlack), "Table loggger is not inited");
                 return aggregateLogger;
             }
 
@@ -189,8 +187,8 @@ namespace Lykke.Job.OrderbookToDiskWriter
                 throw new InvalidOperationException($"LogsConnString {dbLogConnectionString} is not filled in settings");
 
             var persistenceManager = new LykkeLogToAzureStoragePersistenceManager(
-                AzureTableStorage<LogEntity>.Create(dbLogConnectionStringManager, "OrderbookToDiskWriterLog", _console),
-                _console);
+                AzureTableStorage<LogEntity>.Create(dbLogConnectionStringManager, "OrderbookToDiskWriterLog", console),
+                console);
 
             // Creating slack notification service, which logs own azure queue processing messages to aggregate log
             var slackService = services.UseSlackNotificationsSenderViaAzureQueue(new AzureQueueIntegration.AzureQueueSettings
@@ -199,17 +197,17 @@ namespace Lykke.Job.OrderbookToDiskWriter
                 QueueName = settings.CurrentValue.SlackNotifications.AzureQueue.QueueName
             }, aggregateLogger);
 
-            var slackNotificationsManager = new LykkeLogToAzureSlackNotificationsManager(slackService, _console);
+            var slackNotificationsManager = new LykkeLogToAzureSlackNotificationsManager(slackService, console);
 
             // Creating azure storage logger, which logs own messages to concole log
             var azureStorageLogger = new LykkeLogToAzureStorage(
                 persistenceManager,
                 slackNotificationsManager,
-                _console);
+                console);
             azureStorageLogger.Start();
             aggregateLogger.AddLog(azureStorageLogger);
 
-            var logToSlack = LykkeLogToSlack.Create(slackService, "Bridges", LogLevel.Error | LogLevel.FatalError | LogLevel.Warning);
+            var logToSlack = LykkeLogToSlack.Create(slackService, "Bridges", LogLevel.Error | LogLevel.FatalError | LogLevel.Warning | LogLevel.Monitoring);
             aggregateLogger.AddLog(logToSlack);
 
             return aggregateLogger;

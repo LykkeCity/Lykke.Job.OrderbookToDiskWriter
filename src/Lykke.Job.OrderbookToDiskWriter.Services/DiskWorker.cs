@@ -103,7 +103,7 @@ namespace Lykke.Job.OrderbookToDiskWriter.Services
                 }
                 catch (Exception exc)
                 {
-                    await _log.WriteErrorAsync(nameof(DiskWorker), nameof(SaveDataItemAsync), exc);
+                    _log.WriteError(nameof(DiskWorker), nameof(SaveDataItemAsync), exc);
                     throw;
                 }
             }

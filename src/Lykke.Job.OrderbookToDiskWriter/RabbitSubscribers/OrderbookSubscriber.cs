@@ -13,7 +13,6 @@ namespace Lykke.Job.OrderbookToDiskWriter.RabbitSubscribers
     public class OrderbookSubscriber : IStartable, IStopable
     {
         private readonly ILog _log;
-        private readonly IConsole _console;
         private readonly IDataProcessor _dataProcessor;
         private readonly string _connectionString;
         private readonly string _exchangeName;
@@ -21,14 +20,12 @@ namespace Lykke.Job.OrderbookToDiskWriter.RabbitSubscribers
 
         public OrderbookSubscriber(
             ILog log,
-            IConsole console,
             IDataProcessor dataProcessor,
             IShutdownManager shutdownManager,
             string connectionString,
             string exchangeName)
         {
             _log = log;
-            _console = console;
             _dataProcessor = dataProcessor;
             _connectionString = connectionString;
             _exchangeName = exchangeName;
@@ -50,19 +47,20 @@ namespace Lykke.Job.OrderbookToDiskWriter.RabbitSubscribers
                 .Subscribe(ProcessMessageAsync)
                 .CreateDefaultBinding()
                 .SetLogger(_log)
-                .SetConsole(_console)
                 .Start();
         }
 
-        private async Task ProcessMessageAsync(Orderbook item)
+        private Task ProcessMessageAsync(Orderbook item)
         {
             try
             {
                 _dataProcessor.Process(item);
+
+                return Task.CompletedTask;
             }
             catch (Exception ex)
             {
-                await _log.WriteErrorAsync(nameof(OrderbookSubscriber), nameof(ProcessMessageAsync), ex);
+                _log.WriteError(nameof(OrderbookSubscriber), nameof(ProcessMessageAsync), ex);
                 throw;
             }
         }

@@ -12,23 +12,17 @@ namespace Lykke.Job.OrderbookToDiskWriter.Modules
     {
         private readonly OrderbookToDiskWriterSettings _settings;
         private readonly ILog _log;
-        private readonly IConsole _console;
 
-        public JobModule(OrderbookToDiskWriterSettings settings, ILog log, IConsole console)
+        public JobModule(OrderbookToDiskWriterSettings settings, ILog log)
         {
             _settings = settings;
             _log = log;
-            _console = console;
         }
 
         protected override void Load(ContainerBuilder builder)
         {
             builder.RegisterInstance(_log)
                 .As<ILog>()
-                .SingleInstance();
-
-            builder.RegisterInstance(_console)
-                .As<IConsole>()
                 .SingleInstance();
 
             builder.RegisterType<HealthService>()

@@ -65,10 +65,10 @@ namespace Lykke.Job.OrderbookToDiskWriter.Services
             _diskWorker.AddDataItem(convertedText, dirPath);
         }
 
-        public override async Task Execute()
+        public override Task Execute()
         {
             if (_warningSizeInGigabytes == 0 && _maxSizeInGigabytes == 0)
-                return;
+                return Task.CompletedTask;
 
             var dirFilesCountDict = new Dictionary<int, List<List<FileInfo>>>();
             long totalSize = 0;
@@ -92,13 +92,13 @@ namespace Lykke.Job.OrderbookToDiskWriter.Services
             int gbSize = (int)(totalSize / _gigabyte);
 
             if (_warningSizeInGigabytes > 0 && gbSize >= _warningSizeInGigabytes)
-                await _log.WriteWarningAsync(
+                _log.WriteWarning(
                     "DataProcessor.Execute",
                     "SpaceIssue",
                     $"RabbitMq data on {_diskPath} have taken {gbSize}Gb (>= {_warningSizeInGigabytes}Gb)");
 
             if (_maxSizeInGigabytes == 0 || gbSize < _maxSizeInGigabytes)
-                return;
+                return Task.CompletedTask;
 
             long sizeToFree = totalSize - _maxSizeInGigabytes * _gigabyte;
             int deletedFilesCount = 0;
@@ -119,7 +119,7 @@ namespace Lykke.Job.OrderbookToDiskWriter.Services
                         if (!File.Exists(file.FullName))
                             continue;
                         File.Delete(file.FullName);
-                        await _log.WriteWarningAsync("DataProcessor.Execute", "Deleted", $"Deleted {file.FullName} to free some space!");
+                        _log.WriteWarning("DataProcessor.Execute", "Deleted", $"Deleted {file.FullName} to free some space!");
                         ++deletedFilesCount;
                         sizeToFree -= file.Length;
                         if (sizeToFree <= 0)
@@ -127,7 +127,7 @@ namespace Lykke.Job.OrderbookToDiskWriter.Services
                     }
                     catch (Exception ex)
                     {
-                        await _log.WriteWarningAsync(nameof(DataProcessor), nameof(Execute), $"Couldn't delete {file.Name}", ex);
+                        _log.WriteWarning(nameof(DataProcessor), nameof(Execute), $"Couldn't delete {file.Name}", ex);
                     }
                     dirFiles.RemoveAt(0);
                 }
@@ -135,7 +135,9 @@ namespace Lykke.Job.OrderbookToDiskWriter.Services
                     break;
             }
             if (deletedFilesCount > 0)
-                await _log.WriteWarningAsync("DataProcessor.Execute", "DeletedTotal", $"Deleted {deletedFilesCount} files from {_diskPath}");
+                _log.WriteWarning("DataProcessor.Execute", "DeletedTotal", $"Deleted {deletedFilesCount} files from {_diskPath}");
+
+            return Task.CompletedTask;
         }
 
         private static string FormatMessage(Orderbook item)
